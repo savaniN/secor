@@ -2,6 +2,7 @@ package com.pinterest.secor.uploader;
 
 
 import com.microsoft.azure.storage.CloudStorageAccount;
+import com.microsoft.azure.storage.StorageCredentialsSharedAccessSignature;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.CloudBlobClient;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
@@ -18,6 +19,7 @@ import java.net.URISyntaxException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.net.URI;
 
 /**
  * Manages uploads to Microsoft Azure blob storage using Azure Storage SDK for java
@@ -34,14 +36,19 @@ public class AzureUploadManager extends UploadManager {
 
     public AzureUploadManager(SecorConfig config) throws Exception {
         super(config);
-
-        final String storageConnectionString =
-                "DefaultEndpointsProtocol=" + mConfig.getAzureEndpointsProtocol() + ";" +
-                "AccountName=" + mConfig.getAzureAccountName() + ";" +
-                "AccountKey=" + mConfig.getAzureAccountKey() + ";";
-
-        CloudStorageAccount storageAccount = CloudStorageAccount.parse(storageConnectionString);
-        blobClient = storageAccount.createCloudBlobClient();
+        if (mConfig.getAzureAccountKey().isEmpty()) {
+            URI storageURI = new URI(mConfig.getAzureBaseURI());
+            StorageCredentialsSharedAccessSignature sharedAccessSignature = new StorageCredentialsSharedAccessSignature(mConfig.getAzureSASKey());
+            blobClient = new CloudBlobClient(storageURI, sharedAccessSignature);
+        }
+        else {
+            final String storageConnectionString =
+                    "DefaultEndpointsProtocol=" + mConfig.getAzureEndpointsProtocol() + ";" +
+                    "AccountName=" + mConfig.getAzureAccountName() + ";" +
+                    "AccountKey=" + mConfig.getAzureAccountKey() + ";";
+            CloudStorageAccount storageAccount = CloudStorageAccount.parse(storageConnectionString);
+            blobClient = storageAccount.createCloudBlobClient();
+        }
     }
 
     @java.lang.Override
@@ -56,8 +63,9 @@ public class AzureUploadManager extends UploadManager {
             public void run() {
                 try {
                     CloudBlobContainer container = blobClient.getContainerReference(azureContainer);
-                    container.createIfNotExists();
-
+                    if (container == null) {
+                        container.createIfNotExists();
+                    }
                     CloudBlockBlob blob = container.getBlockBlobReference(azureKey);
                     blob.upload(new java.io.FileInputStream(localFile), localFile.length());
 

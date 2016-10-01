@@ -443,7 +443,11 @@ public class SecorConfig {
     public String getAzureContainer() { return getString("secor.azure.container.name"); }
 
     public String getAzurePath() { return getString("secor.azure.path"); }
-    
+
+    public String getAzureSASKey() { return getString("secor.azure.sas.key"); }
+
+    public String getAzureBaseURI() { return getString("secor.azure.base.uri"); }
+
     public Map<String, String> getProtobufMessageClassPerTopic() {
         String prefix = "secor.protobuf.message.class";
         Iterator<String> keys = mProperties.getKeys(prefix);
